@@ -1,5 +1,6 @@
 # Image Masking Studio
 A React-based image masking widget that allows users to upload images, draw masks, and export the results.
+https://image-masking-studio.vercel.app/
 
 ## Features
 - Image upload (JPEG/PNG)
