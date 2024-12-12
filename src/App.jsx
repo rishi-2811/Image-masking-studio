@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import 'fabric'; 
 const fabric = window.fabric; 
 
-const CANVAS_WIDTH = 600;
-const CANVAS_HEIGHT = 400;
+const MAX_CANVAS_WIDTH = 800;
+const MAX_CANVAS_HEIGHT = 600;
+
 
 const BRUSH_TYPES = [
   { name: 'Pen', type: 'PencilBrush' },
@@ -25,51 +26,60 @@ const PRESET_COLORS = [
 const App = () => {
   const [originalImage, setOriginalImage] = useState(null);
   const [maskImage, setMaskImage] = useState(null);
+  const [canvasWidth, setCanvasWidth] = useState(MAX_CANVAS_WIDTH);
+  const [canvasHeight, setCanvasHeight] = useState(MAX_CANVAS_HEIGHT);
   const [brushSize, setBrushSize] = useState(20);
   const [brushColor, setBrushColor] = useState('#FFFFFF');
   const [brushType, setBrushType] = useState('PencilBrush');
   const [customColor, setCustomColor] = useState('#FFFFFF');
   const [isCustomColorMode, setIsCustomColorMode] = useState(false);
   const fabricCanvasRef = useRef(null);
+  const canvasContainerRef = useRef(null);
+
+  const calculateCanvasSize = (imgWidth, imgHeight) => {
+    // Calculate scaling to fit within max dimensions while maintaining aspect ratio
+    const scaleX = MAX_CANVAS_WIDTH / imgWidth;
+    const scaleY = MAX_CANVAS_HEIGHT / imgHeight;
+    const scale = Math.min(scaleX, scaleY, 1); // Use 1 to prevent upscaling
+
+    const newWidth = Math.round(imgWidth * scale);
+    const newHeight = Math.round(imgHeight * scale);
+
+    return { width: newWidth, height: newHeight };
+  };
 
   useEffect(() => {
-    
     const canvasElement = document.getElementById('canvas');
     if (!canvasElement) return;
 
     try {
       fabricCanvasRef.current = new fabric.Canvas(canvasElement, {
         isDrawingMode: true,
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
+        width: canvasWidth,
+        height: canvasHeight,
         backgroundColor: 'black',
       });
 
-      
       updateBrushSettings();
       clearCanvas();
     } catch (error) {
       console.error('Error initializing canvas:', error);
     }
 
-    
     return () => {
       fabricCanvasRef.current?.dispose();
     };
-  }, []);
+  }, [canvasWidth, canvasHeight]);
 
   useEffect(() => {
-    
     updateBrushSettings();
   }, [brushSize, brushColor, brushType]);
 
   const updateBrushSettings = () => {
     if (!fabricCanvasRef.current) return;
 
-    
     fabricCanvasRef.current.isDrawingMode = true;
 
-    
     let brushInstance;
     switch (brushType) {
       case 'PencilBrush':
@@ -85,11 +95,9 @@ const App = () => {
         brushInstance = new fabric.PencilBrush(fabricCanvasRef.current);
     }
 
-    
     brushInstance.width = brushSize;
     brushInstance.color = brushColor;
 
-    
     fabricCanvasRef.current.freeDrawingBrush = brushInstance;
   };
 
@@ -106,15 +114,24 @@ const App = () => {
 
       const imageElement = new Image();
       imageElement.onload = () => {
+        // Calculate new canvas dimensions
+        const { width: newWidth, height: newHeight } = calculateCanvasSize(
+          imageElement.width, 
+          imageElement.height
+        );
+
+        // Update canvas size
+        setCanvasWidth(newWidth);
+        setCanvasHeight(newHeight);
+
         setOriginalImage(imgSrc);
 
         fabric.Image.fromURL(imgSrc, (img) => {
           if (!fabricCanvasRef.current) return;
 
-          
           const scale = Math.min(
-            CANVAS_WIDTH / img.width,
-            CANVAS_HEIGHT / img.height
+            newWidth / img.width,
+            newHeight / img.height
           );
 
           img.scale(scale);
@@ -156,11 +173,9 @@ const App = () => {
       return;
     }
 
-    
     const link = document.createElement('a');
     link.href = maskImage;
     link.download = 'mask.png';
-    
     
     document.body.appendChild(link);
     link.click();
@@ -174,8 +189,8 @@ const App = () => {
     if (originalImage) {
       fabric.Image.fromURL(originalImage, (img) => {
         const scale = Math.min(
-          CANVAS_WIDTH / img.width,
-          CANVAS_HEIGHT / img.height
+          canvasWidth / img.width,
+          canvasHeight / img.height
         );
 
         fabricCanvasRef.current.setBackgroundImage(
@@ -319,8 +334,8 @@ const App = () => {
             <canvas
               id="canvas"
               className="border-4 border-purple-200 rounded-xl shadow-lg"
-              width={CANVAS_WIDTH}
-              height={CANVAS_HEIGHT}
+              width={canvasWidth}
+              height={canvasHeight}
             />
             
           </div>
